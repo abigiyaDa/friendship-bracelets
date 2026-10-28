@@ -19,6 +19,7 @@ The project aims to simplify order management, payment verification, and order p
 ## 🛠️ Tech Stack
 
 - **Backend:** Python, Django
+- **Package Management:** uv
 - **Database:** MySQL
 - **Frontend:** React 
 
@@ -38,11 +39,144 @@ The planned database includes customers, products, categories, product images, c
 
 The schema is designed to support product customization, order tracking, deposit management, and payment verification.
 
+## Project Structure
+
+``` text
+friendship-bracelets/
+├── apps/
+│   ├── catalog/
+│   ├── orders/
+│   ├── payments/
+│   └── pickups/
+├── bracelet_config/
+├── manage.py
+├── .env.example
+├── .gitignore
+├── pyproject.toml
+├── uv.lock
+└── Readme.md
+```
+
+### Django apps
+
+  App          Responsibility
+  ------------ ---------------------------------------------------
+  `catalog`    Products, categories, colors, and product images
+  `orders`     Customers, orders, order items, and customization
+  `payments`   Payment records and receipt verification
+  `pickups`    Pickup locations and availability
+ ------------ ---------------------------------------------------
+ 
+## Getting Started
+
+### 1. Check your installations
+
+``` bash
+git --version
+python3 --version
+uv --version
+mysql --version
+```
+
+### 2. Clone the repository
+
+Replace `<REPOSITORY_URL>` with the team's Git repository URL.
+
+``` bash
+git clone <REPOSITORY_URL>
+cd friendship-bracelets
+```
+
+### 3. Install dependencies
+
+From the project root, run:
+
+``` bash
+uv sync
+```
+
+`uv sync` creates/updates `.venv` and installs the dependencies recorded
+in `pyproject.toml` and `uv.lock`. It serves a similar purpose to
+`pip install -r requirements.txt`, while using this project's uv
+lockfile for consistent versions.
+
+Activate the virtual environment:
+
+``` bash
+source .venv/bin/activate
+```
+
+### 4. Configure environment variables
+
+Create your local `.env` file:
+
+``` bash
+cp .env.example .env
+```
+
+Update `.env` with your own local values:
+
+``` dotenv
+SECRET_KEY=replace-with-your-own-secret-key
+DEBUG=True
+
+DB_NAME=friendship_bracelets
+DB_USER=your_mysql_username
+DB_PASSWORD=your_mysql_password
+DB_HOST=127.0.0.1
+DB_PORT=3306
+```
+
+Use your own MySQL credentials. Never commit `.env` or share real
+passwords.
+
+### 5. Run the development server
+
+``` bash
+uv run python manage.py runserver
+```
+
+Open http://127.0.0.1:8000/ in your browser. The home page currently
+displays a simple Hello message to confirm the server is working.
+
+## Git Workflow
+
+Update your local `main` branch:
+
+``` bash
+git checkout main
+git pull origin main
+```
+
+Create a branch for your task:
+
+``` bash
+git checkout -b feature/your-task-name
+```
+
+Examples: `feature/catalog-models`, `feature/order-api`,
+`feature/payment-verification`.
+
+After making changes:
+
+``` bash
+git status
+git add .
+git commit -m "Describe your changes"
+git push -u origin feature/your-task-name
+```
+
+Open a pull request for review before merging your work into `main`.
+
+Commit `pyproject.toml`, `uv.lock`, the Django project and app files,
+`.env.example`, `.gitignore`, and this README. Do not commit `.env` or
+`.venv/`.
+
+
 ## 📱 Business & Contact
 
 - **Telegram:** [@friendshipbracelets1](https://t.me/friendshipbracelets1)
 
-Follow the channel to explore the business's bracelet designs and updates.
 
 ---
 
