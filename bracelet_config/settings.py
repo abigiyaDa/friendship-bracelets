@@ -27,8 +27,6 @@ DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 if not SECRET_KEY:
     raise ValueError("SECRET_KEY is missing from .env")
 
-if not DEBUG:
-    raise ValueError("DEBUG is missing from .env")
 
 ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
@@ -103,6 +101,10 @@ DATABASES = {
     }
 }
 MEDIA_URL = "/media/"
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",   # Vite
+    "http://localhost:3000",
+]
 MEDIA_ROOT = BASE_DIR / "media"
 
 # Password validation

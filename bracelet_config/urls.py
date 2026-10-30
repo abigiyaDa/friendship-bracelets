@@ -15,17 +15,20 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import HttpResponse
-from django.urls import path
+from django.urls import include, path
 
 
-def home(request):
-    return HttpResponse("Hello! Friendship Bracelets API is running 💜")
+def hello(request):
+    return HttpResponse("<h1>Hello! Friendship Bracelets API is running 💜</h1>")
 
 
 urlpatterns = [
-    path("", home, name="home"),
+    path("", hello),
     path("admin/", admin.site.urls),
-]
-
+    path("api/", include("apps.catalog.urls")),
+    path("api/", include("apps.pickups.urls")),
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
