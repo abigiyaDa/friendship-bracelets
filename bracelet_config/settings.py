@@ -44,6 +44,7 @@ INSTALLED_APPS = [
 
     # Third-party apps
     "rest_framework",
+    "drf_spectacular",
     "corsheaders",
 
     # Our apps
@@ -52,7 +53,16 @@ INSTALLED_APPS = [
     "apps.payments.apps.PaymentsConfig",
     "apps.pickups.apps.PickupsConfig",
 ]
+REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    
+}
 
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Friendship Bracelets API",
+    "DESCRIPTION": "Backend API for the friendship bracelets shop",
+    "VERSION": "1.0.0",
+}
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
