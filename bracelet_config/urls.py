@@ -20,15 +20,18 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import HttpResponse
 from django.urls import include, path
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 
 def hello(request):
     return HttpResponse("<h1>Hello! Friendship Bracelets API is running 💜</h1>")
 
-
+# the swagger like is at http://127.0.0.1:8000/api/docs/
 urlpatterns = [
     path("", hello),
     path("admin/", admin.site.urls),
     path("api/", include("apps.catalog.urls")),
     path("api/", include("apps.pickups.urls")),
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
