@@ -172,6 +172,59 @@ Commit `pyproject.toml`, `uv.lock`, the Django project and app files,
 `.env.example`, `.gitignore`, and this README. Do not commit `.env` or
 `.venv/`.
 
+### 4. Create the database and user
+
+Open MySQL as root:
+- Ubuntu/Mac: `mysql -u root -p` (if access is denied, try `sudo mysql`)
+- Windows: open "MySQL 8.0 Command Line Client" (or a query tab in MySQL Workbench)
+
+Then run (change the password):
+
+```sql
+CREATE DATABASE friendship_bracelets CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'bracelets'@'localhost' IDENTIFIED BY 'choose-a-password';
+GRANT ALL PRIVILEGES ON friendship_bracelets.* TO 'bracelets'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+Type `exit` to leave MySQL. To check that the new user works:
+
+```bash
+mysql -u bracelets -p friendship_bracelets
+```
+
+### 5. Configure environment variables
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env`:
+
+```
+SECRET_KEY=replace-with-your-own-secret-key
+DEBUG=True
+
+DB_NAME=friendship_bracelets
+DB_USER=bracelets
+DB_PASSWORD=the-password-you-chose
+DB_HOST=127.0.0.1
+DB_PORT=3306
+```
+
+Never commit `.env` or share real passwords.
+
+### 6. Create the tables
+
+```bash
+uv run python manage.py migrate
+```
+
+### 7. Run the development server
+
+```bash
+uv run python manage.py runserver
+```
 
 ## 📱 Business & Contact
 
