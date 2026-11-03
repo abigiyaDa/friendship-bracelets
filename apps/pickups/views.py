@@ -1,3 +1,13 @@
-from django.shortcuts import render
+from rest_framework import generics
 
-# Create your views here.
+from .models import PickupLocation
+from .serializers import PickupLocationSerializer
+
+
+class PickupLocationListView(generics.ListAPIView):
+    """Public, read-only list of active pickup locations."""
+
+    serializer_class = PickupLocationSerializer
+
+    def get_queryset(self):
+        return PickupLocation.objects.filter(is_active=True).order_by("area", "name")
