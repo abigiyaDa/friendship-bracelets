@@ -11,11 +11,13 @@ from .serializers import (
 
 
 class CategoryListView(generics.ListAPIView):
+    pagination_class = None
     queryset = Category.objects.all().order_by("name")
     serializer_class = CategorySerializer
 
 
 class ColorListView(generics.ListAPIView):
+    pagination_class = None
     queryset = Color.objects.filter(is_available=True).order_by("name")
     serializer_class = ColorSerializer
 
