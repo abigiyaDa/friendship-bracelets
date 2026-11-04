@@ -6,6 +6,7 @@ from .serializers import PickupLocationSerializer
 
 class PickupLocationListView(generics.ListAPIView):
     """Public, read-only list of active pickup locations."""
+    pagination_class = None
 
     serializer_class = PickupLocationSerializer
 
