@@ -118,6 +118,36 @@ class AdminApiTests(APITestCase):
         o.refresh_from_db()
         self.assertEqual(o.status, "payment_review")
 
+    def test_status_repairs_review_when_payment_already_approved(self):
+        self.login()
+        o = self.make_order()
+        self.make_payment(o, status=Payment.Status.APPROVED)
+        r = self.client.patch(
+            ADMIN + f"orders/{o.id}/status/", {"status": "approved"}, format="json"
+        )
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.data["status"], "approved")
+
+    def test_status_repair_requires_no_pending_payment(self):
+        self.login()
+        o = self.make_order()
+        self.make_payment(o, status=Payment.Status.APPROVED, ref="A")
+        self.make_payment(o, status=Payment.Status.PENDING, ref="B")
+        r = self.client.patch(
+            ADMIN + f"orders/{o.id}/status/", {"status": "approved"}, format="json"
+        )
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.data["detail"], "Use the payment approve/reject endpoints.")
+
+    def test_status_repair_requires_an_approved_payment(self):
+        self.login()
+        o = self.make_order()
+        self.make_payment(o, status=Payment.Status.REJECTED)
+        r = self.client.patch(
+            ADMIN + f"orders/{o.id}/status/", {"status": "approved"}, format="json"
+        )
+        self.assertEqual(r.status_code, 400)
+
     def test_cancel_from_review_rejects_pending_payments(self):
         self.login()
         o = self.make_order()

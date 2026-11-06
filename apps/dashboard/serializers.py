@@ -203,3 +203,28 @@ class PickupLocationAdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = PickupLocation
         fields = ["id", "name", "area", "details", "is_active"]
+# ---------- stats (response DTOs for Swagger) ----------
+
+class StatsTotalsSerializer(serializers.Serializer):
+    orders = serializers.IntegerField()
+    customers = serializers.IntegerField()
+    sales = serializers.CharField()
+    pending_payment_reviews = serializers.IntegerField()
+
+
+class StatsDailyPointSerializer(serializers.Serializer):
+    date = serializers.DateField()
+    orders = serializers.IntegerField()
+    sales = serializers.CharField()
+
+
+class StatsTopProductSerializer(serializers.Serializer):
+    product_name = serializers.CharField()
+    quantity = serializers.IntegerField()
+
+
+class AdminStatsSerializer(serializers.Serializer):
+    totals = StatsTotalsSerializer()
+    orders_by_status = serializers.DictField(child=serializers.IntegerField())
+    daily = StatsDailyPointSerializer(many=True)
+    top_products = StatsTopProductSerializer(many=True)
