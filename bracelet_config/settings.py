@@ -29,7 +29,18 @@ if not SECRET_KEY:
     raise ValueError("SECRET_KEY is missing from .env")
 
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
+CLOUDINARY_ENABLED = os.getenv("USE_CLOUDINARY", "False").lower() == "true"
+
+# Render terminates TLS at its proxy and forwards X-Forwarded-Proto
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+
+def _split_env_list(name, default=""):
+    """Parse a comma-separated env var into a list, skipping empty entries."""
+    return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
+
+
+ALLOWED_HOSTS = _split_env_list("ALLOWED_HOSTS", "localhost,127.0.0.1")
 
 
 # Application definition
@@ -53,7 +64,7 @@ INSTALLED_APPS = [
     "apps.orders.apps.OrdersConfig",
     "apps.payments.apps.PaymentsConfig",
     "apps.pickups.apps.PickupsConfig",
-]
+] + (["cloudinary_storage", "cloudinary"] if CLOUDINARY_ENABLED else [])
 from datetime import timedelta
 
 REST_FRAMEWORK = {
@@ -83,6 +94,7 @@ SPECTACULAR_SETTINGS = {
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -115,6 +127,14 @@ WSGI_APPLICATION = 'bracelet_config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+_db_options = {"charset": "utf8mb4"}
+_db_ssl_ca = os.getenv("DB_SSL_CA")
+if _db_ssl_ca:
+    _ca_path = Path(_db_ssl_ca)
+    if not _ca_path.is_absolute():
+        _ca_path = BASE_DIR / _ca_path
+    _db_options["ssl"] = {"ca": str(_ca_path)}
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
@@ -123,16 +143,31 @@ DATABASES = {
         "PASSWORD": os.getenv("DB_PASSWORD"),
         "HOST": os.getenv("DB_HOST", "127.0.0.1"),
         "PORT": os.getenv("DB_PORT", "3306"),
-        "OPTIONS": {
-            "charset": "utf8mb4",
-        },
+        "OPTIONS": _db_options,
     }
 }
 MEDIA_URL = "/media/"
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",   # Vite
-    "http://localhost:3000",
-]
+
+# Default storage: local filesystem in development, Cloudinary when USE_CLOUDINARY=True.
+# Cloudinary credentials come from the CLOUDINARY_URL environment variable, e.g.
+# cloudinary://api_key:api_secret@your_cloud_name (read by the cloudinary SDK).
+STORAGES = {
+    "default": {
+        "BACKEND": (
+            "cloudinary_storage.storage.MediaCloudinaryStorage"
+            if CLOUDINARY_ENABLED
+            else "django.core.files.storage.FileSystemStorage"
+        ),
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
+# Front-end origins allowed to call the API (comma-separated in CORS_ALLOWED_ORIGINS).
+CORS_ALLOWED_ORIGINS = _split_env_list(
+    "CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:3000"
+)
+CSRF_TRUSTED_ORIGINS = _split_env_list("CSRF_TRUSTED_ORIGINS")
 MEDIA_ROOT = BASE_DIR / "media"
 
 # Password validation
@@ -170,6 +205,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
