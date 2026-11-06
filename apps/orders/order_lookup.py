@@ -13,15 +13,18 @@ from .models import Order
 def phone_variants(raw):
     """0911223344, +251911223344, 251911223344 and 911223344 all match the same customer."""
     digits = re.sub(r"\D", "", raw or "")
+    if not digits:
+        return set()
+    variants = {digits}  # exact match always counts
     if digits.startswith("251"):
         national = digits[3:]
     elif digits.startswith("0"):
         national = digits[1:]
     else:
         national = digits
-    if len(national) != 9:
-        return set()
-    return {national, f"0{national}", f"251{national}", f"+251{national}"}
+    if len(national) == 9:
+        variants.update({national, f"0{national}", f"251{national}", f"+251{national}"})
+    return variants
 
 
 class OrderSummarySerializer(serializers.ModelSerializer):
