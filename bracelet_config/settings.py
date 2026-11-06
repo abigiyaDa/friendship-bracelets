@@ -90,6 +90,10 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Backend API for the friendship bracelets shop",
     "VERSION": "1.0.0",
     "COMPONENT_SPLIT_REQUEST": True,
+    # drf-spectacular renders ReDoc with a classic <script> tag. ReDoc v3's
+    # standalone bundle uses ES-module exports, so pin v2 until the template
+    # supports type="module".
+    "REDOC_DIST": "https://cdn.jsdelivr.net/npm/redoc@2.5.4",
 }
 
 MIDDLEWARE = [
