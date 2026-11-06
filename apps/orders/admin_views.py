@@ -25,6 +25,21 @@ Status = Order.Status
 BLOCKED_FROM_PAYMENT_REVIEW = {Status.APPROVED, Status.PENDING_PAYMENT}
 
 
+def can_repair_review(order):
+    """True when a review order can safely be marked approved directly.
+
+    Legacy or interrupted data can leave an order in payment_review even though
+    an admin already approved its payment. Allowing the missing
+    payment_review -> approved step only when no payment is still pending and
+    at least one payment is approved lets the order catch up with its payment.
+    """
+    payments = order.payments.all()
+    return (
+        not payments.filter(status=Payment.Status.PENDING).exists()
+        and payments.filter(status=Payment.Status.APPROVED).exists()
+    )
+
+
 def order_detail_queryset():
     return (
         Order.objects.select_related("customer", "pickup_location")
@@ -76,7 +91,9 @@ class AdminOrderStatusView(APIView):
         description=(
             "Move an order to a new status using the allowed transitions. "
             "payment_review -> approved / pending_payment must use the payment "
-            "approve/reject endpoints."
+            "approve/reject endpoints, except that payment_review -> approved is "
+            "allowed when the order has an approved payment and no pending one "
+            "(repairing an order whose status fell behind its payment)."
         ),
     )
     def patch(self, request, pk):
@@ -88,10 +105,14 @@ class AdminOrderStatusView(APIView):
             order = get_object_or_404(Order.objects.select_for_update(), pk=pk)
 
             if order.status == Status.PAYMENT_REVIEW and new_status in BLOCKED_FROM_PAYMENT_REVIEW:
-                return Response(
-                    {"detail": "Use the payment approve/reject endpoints."},
-                    status=status.HTTP_400_BAD_REQUEST,
+                repairing_approval = (
+                    new_status == Status.APPROVED and can_repair_review(order)
                 )
+                if not repairing_approval:
+                    return Response(
+                        {"detail": "Use the payment approve/reject endpoints."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
 
             was_in_review = order.status == Status.PAYMENT_REVIEW
             try:
