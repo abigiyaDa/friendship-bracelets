@@ -1,6 +1,13 @@
+from datetime import datetime, time, timedelta
+from decimal import Decimal
+from zoneinfo import ZoneInfo
+
+from django.conf import settings
 from django.db import transaction
-from django.db.models import Max, ProtectedError
+from django.db.models import Count, Max, ProtectedError, Q, Sum
+from django.db.models.functions import TruncDate
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.filters import SearchFilter
@@ -11,9 +18,12 @@ from rest_framework.views import APIView
 
 from apps.catalog.models import Category, Color, Product, ProductImage
 from apps.catalog.serializers import ColorSerializer
+from apps.orders.models import Customer, Order, OrderItem
+from apps.payments.models import Payment
 from apps.pickups.models import PickupLocation
 
 from .serializers import (
+    AdminStatsSerializer,
     CategoryAdminSerializer,
     ColorAdminSerializer,
     PickupLocationAdminSerializer,
@@ -192,3 +202,88 @@ class PickupLocationDetailView(AdminMixin, ProtectedDeleteMixin, generics.Retrie
     serializer_class = PickupLocationAdminSerializer
     http_method_names = ["get", "patch", "delete", "head", "options"]
     protected_message = "Orders use this location. Set is_active=false instead."
+
+# ---------- stats ----------
+
+SALES_STATUSES = [
+    Order.Status.APPROVED,
+    Order.Status.IN_PRODUCTION,
+    Order.Status.READY,
+    Order.Status.PICKED_UP,
+]
+DAILY_DAYS = 30
+
+
+def money(value):
+    return f"{(value or Decimal('0.00')):.2f}"
+
+
+class AdminStatsView(AdminMixin, APIView):
+    """Aggregate numbers for the admin dashboard."""
+
+    @extend_schema(responses=AdminStatsSerializer)
+    def get(self, request):
+        tz = ZoneInfo(settings.TIME_ZONE)
+        today = timezone.localdate()
+        start_date = today - timedelta(days=DAILY_DAYS - 1)
+        start_dt = timezone.make_aware(datetime.combine(start_date, time.min), tz)
+
+        order_totals = Order.objects.aggregate(
+            orders=Count("id"),
+            sales=Sum("total_amount", filter=Q(status__in=SALES_STATUSES)),
+        )
+        customers = Customer.objects.count()
+        pending_payment_reviews = Payment.objects.filter(
+            status=Payment.Status.PENDING
+        ).count()
+
+        status_rows = Order.objects.values("status").annotate(count=Count("id"))
+        counts_by_status = {row["status"]: row["count"] for row in status_rows}
+        orders_by_status = {
+            choice: counts_by_status.get(choice, 0) for choice, _ in Order.Status.choices
+        }
+
+        daily_rows = (
+            Order.objects.filter(created_at__gte=start_dt)
+            .annotate(day=TruncDate("created_at", tzinfo=tz))
+            .values("day")
+            .annotate(
+                orders=Count("id"),
+                sales=Sum("total_amount", filter=Q(status__in=SALES_STATUSES)),
+            )
+        )
+        daily_by_date = {row["day"]: row for row in daily_rows}
+        daily = [
+            {
+                "date": (start_date + timedelta(days=offset)).isoformat(),
+                "orders": daily_by_date.get(start_date + timedelta(days=offset), {}).get("orders", 0),
+                "sales": money(
+                    daily_by_date.get(start_date + timedelta(days=offset), {}).get("sales")
+                ),
+            }
+            for offset in range(DAILY_DAYS)
+        ]
+
+        top_products = (
+            OrderItem.objects.exclude(order__status=Order.Status.CANCELLED)
+            .values("product_name")
+            .annotate(quantity=Sum("quantity"))
+            .order_by("-quantity", "product_name")[:5]
+        )
+
+        return Response(
+            {
+                "totals": {
+                    "orders": order_totals["orders"],
+                    "customers": customers,
+                    "sales": money(order_totals["sales"]),
+                    "pending_payment_reviews": pending_payment_reviews,
+                },
+                "orders_by_status": orders_by_status,
+                "daily": daily,
+                "top_products": [
+                    {"product_name": row["product_name"], "quantity": row["quantity"]}
+                    for row in top_products
+                ],
+            }
+        )

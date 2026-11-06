@@ -9,6 +9,8 @@ urlpatterns = [
     path("auth/login/", AdminLoginView.as_view()),
     path("auth/refresh/", TokenRefreshView.as_view()),
     path("auth/me/", AdminMeView.as_view()),
+    # stats
+    path("stats/", views.AdminStatsView.as_view()),
     # categories
     path("categories/", views.CategoryListCreateView.as_view()),
     path("categories/<int:pk>/", views.CategoryDetailView.as_view()),
