@@ -21,7 +21,7 @@ The project aims to simplify order management, payment verification, and order p
 - **Backend:** Python, Django
 - **Package Management:** uv
 - **Database:** MySQL
-- **Frontend:** React 
+- **Frontend:** React
 
 ## 💳 Payment & Order Process
 
@@ -41,7 +41,7 @@ The schema is designed to support product customization, order tracking, deposit
 
 ## Project Structure
 
-``` text
+```text
 friendship-bracelets/
 ├── apps/
 │   ├── catalog/
@@ -59,19 +59,105 @@ friendship-bracelets/
 
 ### Django apps
 
-  App          Responsibility
-  ------------ ---------------------------------------------------
-  `catalog`    Products, categories, colors, and product images
-  `orders`     Customers, orders, order items, and customization
-  `payments`   Payment records and receipt verification
-  `pickups`    Pickup locations and availability
- ------------ ---------------------------------------------------
- 
+App Responsibility
+
+---
+
+`catalog` Products, categories, colors, and product images
+`orders` Customers, orders, order items, and customization
+`payments` Payment records and receipt verification
+`pickups` Pickup locations and availability
+
+---
+
+## 🔌 API Endpoints
+
+Interactive docs (Swagger): http://127.0.0.1:8000/api/docs/
+
+Method Endpoint Description
+
+---
+
+`GET` `/api/categories/` List categories
+`GET` `/api/colors/` List colors
+`GET` `/api/products/` List products
+`GET` `/api/products/<slug>/` Product details
+`GET` `/api/pickup-locations/` List active pickup locations
+`POST` `/api/orders/` Create an order (see below)
+
+### Create an order: `POST /api/orders/`
+
+A customer sends their info and cart. The server validates everything,
+calculates the money, and saves the customer, order, items, and colors in
+one transaction (if anything fails, nothing is saved).
+
+**Request**
+
+```json
+{
+  "customer": {
+    "full_name": "Hana T",
+    "phone": "0911000000",
+    "email": "",
+    "telegram_username": ""
+  },
+  "pickup_location": 1,
+  "customer_note": "optional",
+  "items": [
+    {
+      "product": 3,
+      "quantity": 2,
+      "color_mode": "custom",
+      "colors": [5, 7, 2],
+      "name_text": "HANA",
+      "notes": ""
+    }
+  ]
+}
+```
+
+- `colors` is a list of color ids. Their order becomes position 1, 2, 3...
+- `color_mode` is `custom` or `as_in_picture`.
+
+**Response: `201 Created`**
+
+```json
+{
+  "order_number": "BR-7K2QX9AB",
+  "status": "pending_payment",
+  "total_amount": "301.00",
+  "deposit_percent": 50,
+  "deposit_amount": "150.50"
+}
+```
+
+**Validation (returns `400` with field errors)**
+
+- `pickup_location` must exist and be active.
+- `items` must not be empty.
+- Each item's `product` must exist and be active, and `quantity` must be at least 1.
+- `color_mode: custom`: the product must allow custom colors, `colors` must not
+  be empty, and every color must belong to that product and be available.
+- `color_mode: as_in_picture`: `colors` must be empty.
+- `name_text` is only allowed if the product allows names, and must not be
+  longer than the product's `max_name_length`.
+- `customer.full_name` and `customer.phone` are required.
+
+**The server decides the money (the client's values are never trusted)**
+
+- `unit_price` and `product_name` are copied from the product.
+- `total_amount` is the sum of `unit_price * quantity`.
+- `deposit_percent` is 50, and `deposit_amount` is half of the total, rounded to 2 decimals.
+- `order_number` is unique, in the format `BR-` plus 8 random uppercase letters/digits.
+- `status` starts as `pending_payment`.
+- Customers are matched by phone number (spaces removed), so the same phone
+  never creates a second customer.
+
 ## Getting Started
 
 ### 1. Check your installations
 
-``` bash
+```bash
 git --version
 python3 --version
 uv --version
@@ -82,7 +168,7 @@ mysql --version
 
 Replace `<REPOSITORY_URL>` with the team's Git repository URL.
 
-``` bash
+```bash
 git clone <REPOSITORY_URL>
 cd friendship-bracelets
 ```
@@ -91,7 +177,7 @@ cd friendship-bracelets
 
 From the project root, run:
 
-``` bash
+```bash
 uv sync
 ```
 
@@ -102,7 +188,7 @@ lockfile for consistent versions.
 
 Activate the virtual environment:
 
-``` bash
+```bash
 source .venv/bin/activate
 ```
 
@@ -110,13 +196,13 @@ source .venv/bin/activate
 
 Create your local `.env` file:
 
-``` bash
+```bash
 cp .env.example .env
 ```
 
 Update `.env` with your own local values:
 
-``` dotenv
+```dotenv
 SECRET_KEY=replace-with-your-own-secret-key
 DEBUG=True
 
@@ -132,7 +218,7 @@ passwords.
 
 ### 5. Run the development server
 
-``` bash
+```bash
 uv run python manage.py runserver
 ```
 
@@ -143,14 +229,14 @@ displays a simple Hello message to confirm the server is working.
 
 Update your local `main` branch:
 
-``` bash
+```bash
 git checkout main
 git pull origin main
 ```
 
 Create a branch for your task:
 
-``` bash
+```bash
 git checkout -b feature/your-task-name
 ```
 
@@ -159,7 +245,7 @@ Examples: `feature/catalog-models`, `feature/order-api`,
 
 After making changes:
 
-``` bash
+```bash
 git status
 git add .
 git commit -m "Describe your changes"
@@ -175,6 +261,7 @@ Commit `pyproject.toml`, `uv.lock`, the Django project and app files,
 ### 4. Create the database and user
 
 Open MySQL as root:
+
 - Ubuntu/Mac: `mysql -u root -p` (if access is denied, try `sudo mysql`)
 - Windows: open "MySQL 8.0 Command Line Client" (or a query tab in MySQL Workbench)
 
@@ -230,7 +317,6 @@ uv run python manage.py runserver
 
 - **Telegram:** [@friendshipbracelets1](https://t.me/friendshipbracelets1)
 
-
 ---
 
-*Built to make personalized friendship bracelets easier to order and manage.*
+_Built to make personalized friendship bracelets easier to order and manage._
